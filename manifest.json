@@ -1,0 +1,10 @@
+{
+	"id": "writing-tracker",
+	"name": "Writing Tracker",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "A simple project and session tracker for Obsidian.",
+	"author": "Allison Betancourt",
+	"authorUrl": "https://allisonbetancourt.com",
+	"isDesktopOnly": false
+}
