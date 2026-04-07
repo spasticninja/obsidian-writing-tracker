@@ -1,8 +1,20 @@
-/*
+.writing-tracker-project {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 12px;
+	padding: 1rem;
+	margin-top: 1rem;
+	background-color: var(--background-secondary);
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.writing-tracker-project h3 {
+	margin-top: 0;
+	margin-bottom: 0.75rem;
+}
 
-If your plugin does not need CSS, delete this file.
+.writing-tracker-empty-state {
+	color: var(--text-muted);
+}
 
-*/
+.writing-tracker-progress {
+	color: var(--text-muted);
+}
