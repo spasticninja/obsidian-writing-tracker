@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { countWordsInText, getTrackedMarkdownPaths } from "../src/word-count";
+import {
+	countWordsInText,
+	getProjectTotalFromTrackedWords,
+	getTrackedMarkdownPaths,
+} from "../src/word-count";
 
 describe("countWordsInText", () => {
 	it("counts words while ignoring frontmatter and code fences", () => {
@@ -37,5 +41,15 @@ describe("getTrackedMarkdownPaths", () => {
 
 	it("returns no paths for manual mode", () => {
 		expect(getTrackedMarkdownPaths("manual", "Novel", ["Novel/ch1.md"])).toEqual([]);
+	});
+});
+
+describe("getProjectTotalFromTrackedWords", () => {
+	it("adds tracked words on top of the project starting word count", () => {
+		expect(getProjectTotalFromTrackedWords(20000, 1500)).toBe(21500);
+	});
+
+	it("never returns less than the starting word count", () => {
+		expect(getProjectTotalFromTrackedWords(20000, -500)).toBe(20000);
 	});
 });

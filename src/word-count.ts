@@ -28,3 +28,10 @@ export function getTrackedMarkdownPaths(
 		(path) => path === trackedPath || path.startsWith(folderPrefix),
 	);
 }
+
+export function getProjectTotalFromTrackedWords(
+	startingWordCount: number,
+	trackedWordCount: number,
+): number {
+	return Math.max(startingWordCount, startingWordCount + trackedWordCount);
+}

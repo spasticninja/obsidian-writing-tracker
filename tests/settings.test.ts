@@ -95,8 +95,8 @@ describe("normalizeSettings", () => {
 					name: "Tracked draft",
 					trackingMode: "file",
 					trackedPath: "Drafts/chapter-one.md",
-					startingWordCount: 0,
-					currentWordCount: 10,
+					startingWordCount: 20000,
+					currentWordCount: 21500,
 					wordGoal: {
 						enabled: true,
 						target: 50000,
@@ -112,5 +112,7 @@ describe("normalizeSettings", () => {
 
 		expect(settings.projects[0]?.trackingMode).toBe("file");
 		expect(settings.projects[0]?.trackedPath).toBe("Drafts/chapter-one.md");
+		expect(settings.projects[0]?.startingWordCount).toBe(20000);
+		expect(settings.projects[0]?.currentWordCount).toBe(21500);
 	});
 });

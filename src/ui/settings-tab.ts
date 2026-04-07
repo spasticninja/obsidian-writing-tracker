@@ -150,7 +150,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 			"Current word count",
 			project.trackingMode === "manual"
 				? "Update this as your draft grows."
-				: "Calculated automatically from the selected source.",
+				: "Calculated as starting word count plus words in the selected source.",
 			project.currentWordCount,
 			async (value) => {
 				project.currentWordCount = Math.max(value, project.startingWordCount);
@@ -311,8 +311,8 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 			.setName(project.trackingMode === "file" ? "Tracked note" : "Tracked folder")
 			.setDesc(
 				project.trackingMode === "file"
-					? "Set the note used to calculate this project's current word count."
-					: "Set the folder whose Markdown files should be counted for this project.",
+					? "Set the note whose words should be added on top of the starting word count."
+					: "Set the folder whose Markdown words should be added on top of the starting word count.",
 			)
 			.addText((text) => {
 				text.setPlaceholder(project.trackingMode === "file" ? "Path/to/note.md" : "Path/to/folder");
@@ -385,7 +385,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		if (project.trackingMode === "manual") {
 			parts.push("manual tracking");
 		} else if (project.trackedPath) {
-			parts.push(`${project.trackingMode}: ${project.trackedPath}`);
+			parts.push(`${project.trackingMode}: + tracked words from ${project.trackedPath}`);
 		} else {
 			parts.push(`${project.trackingMode}: source not set`);
 		}
@@ -408,7 +408,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		if (project.trackingMode === "manual") {
 			parts.push("manual");
 		} else if (project.trackedPath) {
-			parts.push(`${project.trackingMode}: ${project.trackedPath}`);
+			parts.push(`${project.trackingMode}: + tracked words from ${project.trackedPath}`);
 		} else {
 			parts.push(`${project.trackingMode}: source not set`);
 		}

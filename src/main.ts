@@ -14,7 +14,11 @@ import { WritingProject, WritingSession, WritingTrackerSettings } from "./types"
 import { WritingTrackerSettingTab } from "./ui/settings-tab";
 import { StopSessionModal } from "./ui/stop-session-modal";
 import { WRITING_TRACKER_VIEW_TYPE, WritingTrackerView } from "./ui/tracker-view";
-import { countWordsInText, getTrackedMarkdownPaths } from "./word-count";
+import {
+	countWordsInText,
+	getProjectTotalFromTrackedWords,
+	getTrackedMarkdownPaths,
+} from "./word-count";
 
 export default class WritingTrackerPlugin extends Plugin {
 	settings: WritingTrackerSettings = DEFAULT_SETTINGS;
@@ -335,7 +339,10 @@ export default class WritingTrackerPlugin extends Plugin {
 			total += countWordsInText(content);
 		}
 
-		return sanitizeProjectWordCount(project, total);
+		return sanitizeProjectWordCount(
+			project,
+			getProjectTotalFromTrackedWords(project.startingWordCount, total),
+		);
 	}
 
 	private getTrackerLeaf(): WorkspaceLeaf | null {

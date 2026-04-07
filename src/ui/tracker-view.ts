@@ -1,6 +1,6 @@
 import { ItemView, Setting, WorkspaceLeaf } from "obsidian";
 import { calculateActiveSessionMetrics } from "../session-state";
-import { isAutomaticTrackingMode, sanitizeNumber } from "../settings";
+import { sanitizeNumber } from "../settings";
 import WritingTrackerPlugin from "../main";
 import { WritingProject } from "../types";
 
@@ -90,20 +90,7 @@ export class WritingTrackerView extends ItemView {
 		};
 		updateProjectProgress();
 
-		if (isAutomaticTrackingMode(activeProject.trackingMode)) {
-			new Setting(contentEl)
-				.setName("Automatic word count")
-				.setDesc(
-					activeProject.trackedPath
-						? `Tracking ${activeProject.trackingMode}: ${activeProject.trackedPath}`
-						: `Tracking ${activeProject.trackingMode}: source not set`,
-				)
-				.addButton((button) =>
-					button.setButtonText("Recount").onClick(async () => {
-						await this.plugin.recalculateProjectWordCount(activeProject);
-					}),
-				);
-		} else {
+		if (activeProject.trackingMode === "manual") {
 			this.renderCurrentWordCountControls(contentEl, activeProject, updateProjectProgress);
 		}
 
