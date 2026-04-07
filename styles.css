@@ -84,6 +84,48 @@
 	margin-top: 0;
 }
 
+.writing-tracker-sidebar-card {
+	margin: 0.75rem 0;
+	padding: 0.9rem 1rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 12px;
+	background-color: var(--background-secondary);
+}
+
+.writing-tracker-sidebar-card-title {
+	margin: 0;
+	font-size: 0.95rem;
+}
+
+.writing-tracker-sidebar-card-desc {
+	margin: 0.35rem 0 0;
+	color: var(--text-muted);
+	font-size: 0.9rem;
+}
+
+.writing-tracker-sidebar-card-actions {
+	margin-top: 0.8rem;
+}
+
+.writing-tracker-card-control {
+	border-top: 0;
+	padding: 0;
+}
+
+.writing-tracker-card-control .setting-item-control {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	width: 100%;
+	justify-content: flex-start;
+}
+
+.writing-tracker-card-control .dropdown,
+.writing-tracker-card-control input[type="number"] {
+	width: 100%;
+	min-width: 0;
+}
+
 .writing-tracker-session-list {
 	margin: 0;
 	padding-left: 1.25rem;

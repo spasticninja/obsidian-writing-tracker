@@ -49,7 +49,11 @@ describe("getProjectTotalFromTrackedWords", () => {
 		expect(getProjectTotalFromTrackedWords(20000, 1500)).toBe(21500);
 	});
 
+	it("applies manual adjustment on top of tracked words", () => {
+		expect(getProjectTotalFromTrackedWords(20000, 1500, -125)).toBe(21375);
+	});
+
 	it("never returns less than the starting word count", () => {
-		expect(getProjectTotalFromTrackedWords(20000, -500)).toBe(20000);
+		expect(getProjectTotalFromTrackedWords(20000, -500, -250)).toBe(20000);
 	});
 });

@@ -28,6 +28,7 @@ export interface WritingProject {
 	name: string;
 	trackingMode: ProjectTrackingMode;
 	trackedPath: string;
+	manualWordCountAdjustment: number;
 	startingWordCount: number;
 	currentWordCount: number;
 	wordGoal: WritingGoal;

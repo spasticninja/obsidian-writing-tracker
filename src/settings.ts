@@ -19,6 +19,7 @@ export function createEmptyProject(): WritingProject {
 		name: "Untitled project",
 		trackingMode: "manual",
 		trackedPath: "",
+		manualWordCountAdjustment: 0,
 		startingWordCount: 0,
 		currentWordCount: 0,
 		wordGoal: {
@@ -55,6 +56,10 @@ export function normalizeProject(project: Partial<WritingProject> | null | undef
 		name: project?.name?.trim() || baseProject.name,
 		trackingMode: normalizeTrackingMode(project?.trackingMode),
 		trackedPath: typeof project?.trackedPath === "string" ? project.trackedPath.trim() : "",
+		manualWordCountAdjustment: sanitizeInteger(
+			project?.manualWordCountAdjustment,
+			baseProject.manualWordCountAdjustment,
+		),
 		startingWordCount: sanitizeNumber(project?.startingWordCount, 0),
 		currentWordCount: sanitizeNumber(
 			project?.currentWordCount,
@@ -75,6 +80,14 @@ export function normalizeProject(project: Partial<WritingProject> | null | undef
 export function sanitizeNumber(value: unknown, fallback: number): number {
 	if (typeof value === "number" && Number.isFinite(value)) {
 		return Math.max(0, Math.floor(value));
+	}
+
+	return fallback;
+}
+
+export function sanitizeInteger(value: unknown, fallback: number): number {
+	if (typeof value === "number" && Number.isFinite(value)) {
+		return Math.floor(value);
 	}
 
 	return fallback;

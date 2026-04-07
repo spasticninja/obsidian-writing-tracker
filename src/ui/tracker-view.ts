@@ -65,18 +65,24 @@ export class WritingTrackerView extends ItemView {
 			return;
 		}
 
-		new Setting(contentEl)
-			.setName("Active project")
-			.setDesc("Sessions will be recorded against this project.")
-			.addDropdown((dropdown) => {
-				this.plugin.settings.projects.forEach((project) => {
-					dropdown.addOption(project.id, project.name);
+		this.renderSidebarCard(
+			contentEl,
+			"Active project",
+			"Sessions will be recorded against this project.",
+			(cardEl) => {
+				const setting = new Setting(cardEl).setClass("writing-tracker-card-control");
+				setting.infoEl.remove();
+				setting.addDropdown((dropdown) => {
+					this.plugin.settings.projects.forEach((project) => {
+						dropdown.addOption(project.id, project.name);
+					});
+					dropdown.setValue(activeProject.id);
+					dropdown.onChange(async (value) => {
+						await this.plugin.setActiveProject(value);
+					});
 				});
-				dropdown.setValue(activeProject.id);
-				dropdown.onChange(async (value) => {
-					await this.plugin.setActiveProject(value);
-				});
-			});
+			},
+		);
 
 		const projectProgressSetting = new Setting(contentEl).setName("Project progress");
 		const updateProjectProgress = () => {
@@ -97,17 +103,23 @@ export class WritingTrackerView extends ItemView {
 		if (this.plugin.settings.activeSession) {
 			this.renderActiveSession(contentEl, activeProject, updateProjectProgress);
 		} else {
-			new Setting(contentEl)
-				.setName("Start session")
-				.setDesc("Use the active project and current word count as the session baseline.")
-				.addButton((button) =>
-					button
-						.setCta()
-						.setButtonText("Start session")
-						.onClick(async () => {
-							await this.plugin.startSession();
-						}),
-				);
+			this.renderSidebarCard(
+				contentEl,
+				"Start session",
+				"Use the active project and current word count as the session baseline.",
+				(cardEl) => {
+					const setting = new Setting(cardEl).setClass("writing-tracker-card-control");
+					setting.infoEl.remove();
+					setting.addButton((button) =>
+						button
+							.setCta()
+							.setButtonText("Start session")
+							.onClick(async () => {
+								await this.plugin.startSession();
+							}),
+					);
+				},
+			);
 		}
 
 		const sessionsForProject = this.plugin
@@ -138,29 +150,43 @@ export class WritingTrackerView extends ItemView {
 		activeProject: WritingProject,
 		updateProjectProgress: () => void,
 	): void {
-		new Setting(containerEl)
-			.setName("Current word count")
-			.setDesc("Update this while you write or after writing elsewhere.")
-			.addText((text) => {
-				text.inputEl.type = "number";
-				text.setValue(String(activeProject.currentWordCount));
-				text.onChange(async (value) => {
-					const nextValue = sanitizeNumber(Number.parseInt(value, 10), activeProject.currentWordCount);
-					activeProject.currentWordCount = Math.max(nextValue, activeProject.startingWordCount);
-					updateProjectProgress();
-					await this.plugin.updateProjectCurrentWordCount(activeProject.id, activeProject.currentWordCount, false);
-				});
-			})
-			.addButton((button) =>
-				button.setButtonText("+100").onClick(async () => {
-					await this.plugin.adjustProjectCurrentWordCount(activeProject.id, 100);
-				}),
-			)
-			.addButton((button) =>
-				button.setButtonText("+500").onClick(async () => {
-					await this.plugin.adjustProjectCurrentWordCount(activeProject.id, 500);
-				}),
-			);
+		this.renderSidebarCard(
+			containerEl,
+			"Current word count",
+			"Update this while you write or after writing elsewhere.",
+			(cardEl) => {
+				const setting = new Setting(cardEl).setClass("writing-tracker-card-control");
+				setting.infoEl.remove();
+				setting
+					.addText((text) => {
+						text.inputEl.type = "number";
+						text.setValue(String(activeProject.currentWordCount));
+						text.onChange(async (value) => {
+							const nextValue = sanitizeNumber(
+								Number.parseInt(value, 10),
+								activeProject.currentWordCount,
+							);
+							activeProject.currentWordCount = Math.max(nextValue, activeProject.startingWordCount);
+							updateProjectProgress();
+							await this.plugin.updateProjectCurrentWordCount(
+								activeProject.id,
+								activeProject.currentWordCount,
+								false,
+							);
+						});
+					})
+					.addButton((button) =>
+						button.setButtonText("+100").onClick(async () => {
+							await this.plugin.adjustProjectCurrentWordCount(activeProject.id, 100);
+						}),
+					)
+					.addButton((button) =>
+						button.setButtonText("+500").onClick(async () => {
+							await this.plugin.adjustProjectCurrentWordCount(activeProject.id, 500);
+						}),
+					);
+			},
+		);
 	}
 
 	private renderActiveSession(
@@ -189,17 +215,42 @@ export class WritingTrackerView extends ItemView {
 			updateSessionDetails();
 		}, 1000);
 
-		new Setting(containerEl)
-			.setName("Stop session")
-			.setDesc("Stop the current session and record the latest word count.")
-			.addButton((button) =>
-				button
-					.setCta()
-					.setButtonText("Stop session")
-					.onClick(async () => {
-						await this.plugin.openStopSessionModal();
-					}),
-			);
+		this.renderSidebarCard(
+			containerEl,
+			"Stop session",
+			"Stop the current session and record the latest word count.",
+			(cardEl) => {
+				const setting = new Setting(cardEl).setClass("writing-tracker-card-control");
+				setting.infoEl.remove();
+				setting.addButton((button) =>
+					button
+						.setCta()
+						.setButtonText("Stop session")
+						.onClick(async () => {
+							await this.plugin.openStopSessionModal();
+						}),
+				);
+			},
+		);
+	}
+
+	private renderSidebarCard(
+		containerEl: HTMLElement,
+		title: string,
+		description: string,
+		renderControls: (cardEl: HTMLElement) => void,
+	): void {
+		const cardEl = containerEl.createDiv({ cls: "writing-tracker-sidebar-card" });
+		cardEl.createEl("h3", {
+			cls: "writing-tracker-sidebar-card-title",
+			text: title,
+		});
+		cardEl.createEl("p", {
+			cls: "writing-tracker-sidebar-card-desc",
+			text: description,
+		});
+		const actionsEl = cardEl.createDiv({ cls: "writing-tracker-sidebar-card-actions" });
+		renderControls(actionsEl);
 	}
 
 	private clearTimer(): void {

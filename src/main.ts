@@ -150,6 +150,12 @@ export default class WritingTrackerPlugin extends Plugin {
 		new StopSessionModal(this.app, {
 			currentWordCount: project.currentWordCount,
 			projectName: project.name,
+			sessionStartingWordCount: activeSession.startingWordCount,
+			trackingMode: project.trackingMode,
+			startingWordCount: project.startingWordCount,
+			trackedWordCount:
+				project.currentWordCount - project.startingWordCount - project.manualWordCountAdjustment,
+			manualWordCountAdjustment: project.manualWordCountAdjustment,
 			onSubmit: async (endingWordCount) => {
 				await this.stopSession(endingWordCount);
 			},
@@ -341,7 +347,11 @@ export default class WritingTrackerPlugin extends Plugin {
 
 		return sanitizeProjectWordCount(
 			project,
-			getProjectTotalFromTrackedWords(project.startingWordCount, total),
+			getProjectTotalFromTrackedWords(
+				project.startingWordCount,
+				total,
+				project.manualWordCountAdjustment,
+			),
 		);
 	}
 

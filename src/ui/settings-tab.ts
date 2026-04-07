@@ -1,6 +1,6 @@
 import { App, Notice, PluginSettingTab, Setting, TextComponent, setIcon } from "obsidian";
 import WritingTrackerPlugin from "../main";
-import { isAutomaticTrackingMode, sanitizeNumber } from "../settings";
+import { isAutomaticTrackingMode, sanitizeInteger, sanitizeNumber } from "../settings";
 import { ProjectTrackingMode, WritingProject } from "../types";
 
 export class WritingTrackerSettingTab extends PluginSettingTab {
@@ -163,6 +163,17 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		this.addTrackingModeSetting(body, project);
 		if (isAutomaticTrackingMode(project.trackingMode)) {
 			this.addTrackingPathSetting(body, project, updateProgress);
+			this.addSignedNumberSetting(
+				body,
+				"Manual adjustment",
+				"Optional correction added to or subtracted from the tracked source total.",
+				project.manualWordCountAdjustment,
+				async (value) => {
+					project.manualWordCountAdjustment = value;
+					await this.plugin.recalculateProjectWordCount(project);
+					updateProgress();
+				},
+			);
 		}
 
 		this.addToggleNumberSetting(
@@ -351,6 +362,25 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 			);
 	}
 
+	private addSignedNumberSetting(
+		containerEl: HTMLElement,
+		name: string,
+		description: string,
+		value: number,
+		onCommit: (value: number) => Promise<void>,
+	): void {
+		new Setting(containerEl)
+			.setName(name)
+			.setDesc(description)
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.setValue(String(value));
+				text.onChange((changedValue) => {
+					void onCommit(sanitizeSignedNumberInput(changedValue, value));
+				});
+			});
+	}
+
 	private addToggleNumberSetting(
 		containerEl: HTMLElement,
 		name: string,
@@ -386,6 +416,9 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 			parts.push("manual tracking");
 		} else if (project.trackedPath) {
 			parts.push(`${project.trackingMode}: + tracked words from ${project.trackedPath}`);
+			if (project.manualWordCountAdjustment !== 0) {
+				parts.push(`${project.manualWordCountAdjustment} adjustment`);
+			}
 		} else {
 			parts.push(`${project.trackingMode}: source not set`);
 		}
@@ -409,6 +442,9 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 			parts.push("manual");
 		} else if (project.trackedPath) {
 			parts.push(`${project.trackingMode}: + tracked words from ${project.trackedPath}`);
+			if (project.manualWordCountAdjustment !== 0) {
+				parts.push(`${project.manualWordCountAdjustment} adjustment`);
+			}
 		} else {
 			parts.push(`${project.trackingMode}: source not set`);
 		}
@@ -450,6 +486,10 @@ function configureNumberInput(text: TextComponent, value: number, placeholder?: 
 
 function sanitizeNumberInput(value: string, fallback: number): number {
 	return sanitizeNumber(Number.parseInt(value, 10), fallback);
+}
+
+function sanitizeSignedNumberInput(value: string, fallback: number): number {
+	return sanitizeInteger(Number.parseInt(value, 10), fallback);
 }
 
 function getPercent(current: number, target: number): number {

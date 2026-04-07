@@ -32,6 +32,10 @@ export function getTrackedMarkdownPaths(
 export function getProjectTotalFromTrackedWords(
 	startingWordCount: number,
 	trackedWordCount: number,
+	manualWordCountAdjustment = 0,
 ): number {
-	return Math.max(startingWordCount, startingWordCount + trackedWordCount);
+	return Math.max(
+		startingWordCount,
+		startingWordCount + trackedWordCount + manualWordCountAdjustment,
+	);
 }

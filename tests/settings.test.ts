@@ -7,6 +7,7 @@ describe("createEmptyProject", () => {
 
 		expect(project.trackingMode).toBe("manual");
 		expect(project.trackedPath).toBe("");
+		expect(project.manualWordCountAdjustment).toBe(0);
 		expect(project.wordGoal.enabled).toBe(true);
 		expect(project.wordGoal.target).toBe(50000);
 		expect(project.timeGoal.enabled).toBe(false);
@@ -95,8 +96,9 @@ describe("normalizeSettings", () => {
 					name: "Tracked draft",
 					trackingMode: "file",
 					trackedPath: "Drafts/chapter-one.md",
+					manualWordCountAdjustment: -125,
 					startingWordCount: 20000,
-					currentWordCount: 21500,
+					currentWordCount: 21375,
 					wordGoal: {
 						enabled: true,
 						target: 50000,
@@ -112,7 +114,8 @@ describe("normalizeSettings", () => {
 
 		expect(settings.projects[0]?.trackingMode).toBe("file");
 		expect(settings.projects[0]?.trackedPath).toBe("Drafts/chapter-one.md");
+		expect(settings.projects[0]?.manualWordCountAdjustment).toBe(-125);
 		expect(settings.projects[0]?.startingWordCount).toBe(20000);
-		expect(settings.projects[0]?.currentWordCount).toBe(21500);
+		expect(settings.projects[0]?.currentWordCount).toBe(21375);
 	});
 });
