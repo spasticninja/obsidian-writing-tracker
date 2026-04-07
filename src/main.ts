@@ -1,16 +1,27 @@
-import { Notice, Plugin, WorkspaceLeaf } from "obsidian";
-import { createEmptyProject, DEFAULT_SETTINGS, normalizeSettings } from "./settings";
-import { completeSession, createActiveSession } from "./session-state";
+import { Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import {
+	createEmptyProject,
+	DEFAULT_SETTINGS,
+	isAutomaticTrackingMode,
+	normalizeSettings,
+} from "./settings";
+import {
+	completeSession,
+	createActiveSession,
+	sanitizeProjectWordCount,
+} from "./session-state";
 import { WritingProject, WritingSession, WritingTrackerSettings } from "./types";
 import { WritingTrackerSettingTab } from "./ui/settings-tab";
 import { StopSessionModal } from "./ui/stop-session-modal";
 import { WRITING_TRACKER_VIEW_TYPE, WritingTrackerView } from "./ui/tracker-view";
+import { countWordsInText, getTrackedMarkdownPaths } from "./word-count";
 
 export default class WritingTrackerPlugin extends Plugin {
 	settings: WritingTrackerSettings = DEFAULT_SETTINGS;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
+		await this.recalculateAutomaticProjects(false);
 
 		this.registerView(
 			WRITING_TRACKER_VIEW_TYPE,
@@ -19,6 +30,7 @@ export default class WritingTrackerPlugin extends Plugin {
 
 		this.addSettingTab(new WritingTrackerSettingTab(this.app, this));
 		this.registerCommands();
+		this.registerVaultEvents();
 
 		this.app.workspace.onLayoutReady(() => {
 			void this.ensureTrackerView();
@@ -52,6 +64,50 @@ export default class WritingTrackerPlugin extends Plugin {
 
 		this.settings.activeProjectId = projectId;
 		await this.saveSettings();
+	}
+
+	async updateProjectCurrentWordCount(
+		projectId: string,
+		wordCount: number,
+		refreshViews = true,
+	): Promise<void> {
+		const project = this.getProjectById(projectId);
+		if (!project) {
+			return;
+		}
+
+		project.currentWordCount = sanitizeProjectWordCount(project, wordCount);
+		await this.saveSettings(refreshViews);
+	}
+
+	async updateProjectTracking(
+		projectId: string,
+		trackingMode: WritingProject["trackingMode"],
+		trackedPath: string,
+	): Promise<void> {
+		const project = this.getProjectById(projectId);
+		if (!project) {
+			return;
+		}
+
+		project.trackingMode = trackingMode;
+		project.trackedPath = trackedPath.trim();
+
+		if (isAutomaticTrackingMode(project.trackingMode)) {
+			await this.recalculateProjectWordCount(project);
+			return;
+		}
+
+		await this.saveSettings();
+	}
+
+	async adjustProjectCurrentWordCount(projectId: string, delta: number): Promise<void> {
+		const project = this.getProjectById(projectId);
+		if (!project) {
+			return;
+		}
+
+		await this.updateProjectCurrentWordCount(projectId, project.currentWordCount + delta);
 	}
 
 	async startSession(): Promise<void> {
@@ -131,9 +187,11 @@ export default class WritingTrackerPlugin extends Plugin {
 		new Notice("Added a new writing project. Edit it in Writing Tracker settings.");
 	}
 
-	async saveSettings(): Promise<void> {
+	async saveSettings(refreshViews = true): Promise<void> {
 		await this.saveData(this.settings);
-		this.refreshViews();
+		if (refreshViews) {
+			this.refreshViews();
+		}
 	}
 
 	async ensureTrackerView(): Promise<void> {
@@ -158,6 +216,42 @@ export default class WritingTrackerPlugin extends Plugin {
 	async loadSettings(): Promise<void> {
 		const loadedData = await this.loadData();
 		this.settings = normalizeSettings(loadedData);
+	}
+
+	async recalculateAutomaticProjects(refreshViews = true): Promise<void> {
+		let changed = false;
+
+		for (const project of this.settings.projects) {
+			const projectChanged = await this.recalculateProjectWordCount(project, false);
+			changed = changed || projectChanged;
+		}
+
+		if (changed) {
+			await this.saveSettings(refreshViews);
+		} else if (refreshViews) {
+			this.refreshViews();
+		}
+	}
+
+	async recalculateProjectWordCount(
+		project: WritingProject,
+		refreshViews = true,
+	): Promise<boolean> {
+		if (!isAutomaticTrackingMode(project.trackingMode)) {
+			return false;
+		}
+
+		const nextCount = await this.calculateTrackedWordCount(project);
+		if (project.currentWordCount === nextCount) {
+			return false;
+		}
+
+		project.currentWordCount = nextCount;
+		if (refreshViews) {
+			await this.saveSettings(true);
+		}
+
+		return true;
 	}
 
 	private refreshViews(): void {
@@ -205,6 +299,43 @@ export default class WritingTrackerPlugin extends Plugin {
 				await this.openStopSessionModal();
 			},
 		});
+	}
+
+	private registerVaultEvents(): void {
+		const handleVaultChange = () => {
+			void this.recalculateAutomaticProjects();
+		};
+
+		this.registerEvent(this.app.vault.on("create", handleVaultChange));
+		this.registerEvent(this.app.vault.on("modify", handleVaultChange));
+		this.registerEvent(this.app.vault.on("delete", handleVaultChange));
+		this.registerEvent(this.app.vault.on("rename", handleVaultChange));
+	}
+
+	private async calculateTrackedWordCount(project: WritingProject): Promise<number> {
+		const markdownFiles = this.app.vault.getMarkdownFiles();
+		const trackedPaths = getTrackedMarkdownPaths(
+			project.trackingMode,
+			project.trackedPath,
+			markdownFiles.map((file) => file.path),
+		);
+
+		if (trackedPaths.length === 0) {
+			return sanitizeProjectWordCount(project, project.startingWordCount);
+		}
+
+		let total = 0;
+		for (const path of trackedPaths) {
+			const file = markdownFiles.find((candidate) => candidate.path === path);
+			if (!(file instanceof TFile)) {
+				continue;
+			}
+
+			const content = await this.app.vault.cachedRead(file);
+			total += countWordsInText(content);
+		}
+
+		return sanitizeProjectWordCount(project, total);
 	}
 
 	private getTrackerLeaf(): WorkspaceLeaf | null {

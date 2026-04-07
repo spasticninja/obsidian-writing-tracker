@@ -3,6 +3,8 @@ export interface WritingGoal {
 	target: number;
 }
 
+export type ProjectTrackingMode = "manual" | "file" | "folder";
+
 export interface WritingSession {
 	id: string;
 	projectId: string;
@@ -24,6 +26,8 @@ export interface ActiveWritingSession {
 export interface WritingProject {
 	id: string;
 	name: string;
+	trackingMode: ProjectTrackingMode;
+	trackedPath: string;
 	startingWordCount: number;
 	currentWordCount: number;
 	wordGoal: WritingGoal;

@@ -5,6 +5,8 @@ describe("createEmptyProject", () => {
 	it("uses the expected default writing goals", () => {
 		const project = createEmptyProject();
 
+		expect(project.trackingMode).toBe("manual");
+		expect(project.trackedPath).toBe("");
 		expect(project.wordGoal.enabled).toBe(true);
 		expect(project.wordGoal.target).toBe(50000);
 		expect(project.timeGoal.enabled).toBe(false);
@@ -83,5 +85,32 @@ describe("normalizeSettings", () => {
 		expect(settings.activeSession?.projectId).toBe(project.id);
 		expect(settings.sessions).toHaveLength(1);
 		expect(settings.sessions[0]?.wordsWritten).toBe(200);
+	});
+
+	it("normalizes tracking mode and tracked path for projects", () => {
+		const settings = normalizeSettings({
+			projects: [
+				{
+					id: "project-1",
+					name: "Tracked draft",
+					trackingMode: "file",
+					trackedPath: "Drafts/chapter-one.md",
+					startingWordCount: 0,
+					currentWordCount: 10,
+					wordGoal: {
+						enabled: true,
+						target: 50000,
+					},
+					timeGoal: {
+						enabled: false,
+						target: 30,
+					},
+					notes: "",
+				},
+			],
+		});
+
+		expect(settings.projects[0]?.trackingMode).toBe("file");
+		expect(settings.projects[0]?.trackedPath).toBe("Drafts/chapter-one.md");
 	});
 });

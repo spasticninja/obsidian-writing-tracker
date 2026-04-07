@@ -1,10 +1,14 @@
 import { ItemView, Setting, WorkspaceLeaf } from "obsidian";
+import { calculateActiveSessionMetrics } from "../session-state";
+import { isAutomaticTrackingMode, sanitizeNumber } from "../settings";
 import WritingTrackerPlugin from "../main";
+import { WritingProject } from "../types";
 
 export const WRITING_TRACKER_VIEW_TYPE = "writing-tracker-sidebar";
 
 export class WritingTrackerView extends ItemView {
 	plugin: WritingTrackerPlugin;
+	private intervalId: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: WritingTrackerPlugin) {
 		super(leaf);
@@ -28,10 +32,13 @@ export class WritingTrackerView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		this.clearTimer();
 		this.contentEl.empty();
 	}
 
 	render(): void {
+		this.clearTimer();
+
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("writing-tracker-view");
@@ -71,36 +78,37 @@ export class WritingTrackerView extends ItemView {
 				});
 			});
 
-		const totalWordsWritten = Math.max(activeProject.currentWordCount - activeProject.startingWordCount, 0);
-		new Setting(contentEl)
-			.setName("Project progress")
-			.setDesc(
+		const projectProgressSetting = new Setting(contentEl).setName("Project progress");
+		const updateProjectProgress = () => {
+			const totalWordsWritten = Math.max(
+				activeProject.currentWordCount - activeProject.startingWordCount,
+				0,
+			);
+			projectProgressSetting.setDesc(
 				`${activeProject.currentWordCount} current words • ${totalWordsWritten} words written overall`,
 			);
+		};
+		updateProjectProgress();
+
+		if (isAutomaticTrackingMode(activeProject.trackingMode)) {
+			new Setting(contentEl)
+				.setName("Automatic word count")
+				.setDesc(
+					activeProject.trackedPath
+						? `Tracking ${activeProject.trackingMode}: ${activeProject.trackedPath}`
+						: `Tracking ${activeProject.trackingMode}: source not set`,
+				)
+				.addButton((button) =>
+					button.setButtonText("Recount").onClick(async () => {
+						await this.plugin.recalculateProjectWordCount(activeProject);
+					}),
+				);
+		} else {
+			this.renderCurrentWordCountControls(contentEl, activeProject, updateProjectProgress);
+		}
 
 		if (this.plugin.settings.activeSession) {
-			const activeSession = this.plugin.settings.activeSession;
-			const sessionProject = this.plugin.getProjectById(activeSession.projectId);
-
-			new Setting(contentEl)
-				.setName("Active session")
-				.setDesc(
-					`${sessionProject?.name ?? "Unknown project"} • started ${formatTimestamp(
-						activeSession.startedAt,
-					)}`,
-				);
-
-			new Setting(contentEl)
-				.setName("Stop session")
-				.setDesc("Stop the current session and record the latest word count.")
-				.addButton((button) =>
-					button
-						.setCta()
-						.setButtonText("Stop session")
-						.onClick(async () => {
-							await this.plugin.openStopSessionModal();
-						}),
-				);
+			this.renderActiveSession(contentEl, activeProject, updateProjectProgress);
 		} else {
 			new Setting(contentEl)
 				.setName("Start session")
@@ -137,6 +145,82 @@ export class WritingTrackerView extends ItemView {
 			);
 		});
 	}
+
+	private renderCurrentWordCountControls(
+		containerEl: HTMLElement,
+		activeProject: WritingProject,
+		updateProjectProgress: () => void,
+	): void {
+		new Setting(containerEl)
+			.setName("Current word count")
+			.setDesc("Update this while you write or after writing elsewhere.")
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.setValue(String(activeProject.currentWordCount));
+				text.onChange(async (value) => {
+					const nextValue = sanitizeNumber(Number.parseInt(value, 10), activeProject.currentWordCount);
+					activeProject.currentWordCount = Math.max(nextValue, activeProject.startingWordCount);
+					updateProjectProgress();
+					await this.plugin.updateProjectCurrentWordCount(activeProject.id, activeProject.currentWordCount, false);
+				});
+			})
+			.addButton((button) =>
+				button.setButtonText("+100").onClick(async () => {
+					await this.plugin.adjustProjectCurrentWordCount(activeProject.id, 100);
+				}),
+			)
+			.addButton((button) =>
+				button.setButtonText("+500").onClick(async () => {
+					await this.plugin.adjustProjectCurrentWordCount(activeProject.id, 500);
+				}),
+			);
+	}
+
+	private renderActiveSession(
+		containerEl: HTMLElement,
+		activeProject: WritingProject,
+		updateProjectProgress: () => void,
+	): void {
+		const activeSession = this.plugin.settings.activeSession;
+		if (!activeSession) {
+			return;
+		}
+
+		const sessionProject = this.plugin.getProjectById(activeSession.projectId);
+		const sessionSetting = new Setting(containerEl).setName("Active session");
+		const updateSessionDetails = () => {
+			const metrics = calculateActiveSessionMetrics(activeProject, activeSession);
+			sessionSetting.setDesc(
+				`${sessionProject?.name ?? "Unknown project"} • started ${formatTimestamp(
+					activeSession.startedAt,
+				)} • ${formatDuration(metrics.elapsedMs)} elapsed • ${metrics.wordsWritten} session words`,
+			);
+			updateProjectProgress();
+		};
+		updateSessionDetails();
+		this.intervalId = window.setInterval(() => {
+			updateSessionDetails();
+		}, 1000);
+
+		new Setting(containerEl)
+			.setName("Stop session")
+			.setDesc("Stop the current session and record the latest word count.")
+			.addButton((button) =>
+				button
+					.setCta()
+					.setButtonText("Stop session")
+					.onClick(async () => {
+						await this.plugin.openStopSessionModal();
+					}),
+			);
+	}
+
+	private clearTimer(): void {
+		if (this.intervalId !== null) {
+			window.clearInterval(this.intervalId);
+			this.intervalId = null;
+		}
+	}
 }
 
 function formatTimestamp(value: string): string {
@@ -145,17 +229,18 @@ function formatTimestamp(value: string): string {
 }
 
 function formatDuration(durationMs: number): string {
-	const totalMinutes = Math.max(1, Math.round(durationMs / 60000));
-	const hours = Math.floor(totalMinutes / 60);
-	const minutes = totalMinutes % 60;
+	const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const seconds = totalSeconds % 60;
 
-	if (hours === 0) {
-		return `${minutes} min`;
+	if (hours > 0) {
+		return `${hours} hr ${minutes} min`;
 	}
 
-	if (minutes === 0) {
-		return `${hours} hr`;
+	if (minutes > 0) {
+		return `${minutes} min ${seconds} sec`;
 	}
 
-	return `${hours} hr ${minutes} min`;
+	return `${seconds} sec`;
 }

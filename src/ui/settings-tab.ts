@@ -1,7 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting, TextComponent } from "obsidian";
 import WritingTrackerPlugin from "../main";
-import { sanitizeNumber } from "../settings";
-import { WritingProject } from "../types";
+import { isAutomaticTrackingMode, sanitizeNumber } from "../settings";
+import { ProjectTrackingMode, WritingProject } from "../types";
 
 export class WritingTrackerSettingTab extends PluginSettingTab {
 	plugin: WritingTrackerPlugin;
@@ -105,14 +105,22 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		this.addNumberSetting(
 			section,
 			"Current word count",
-			"Update this as your draft grows.",
+			project.trackingMode === "manual"
+				? "Update this as your draft grows."
+				: "Calculated automatically from the selected source.",
 			project.currentWordCount,
 			async (value) => {
 				project.currentWordCount = Math.max(value, project.startingWordCount);
 				updateProgress();
 				await this.persistSettings();
 			},
+			project.trackingMode !== "manual",
 		);
+
+		this.addTrackingModeSetting(section, project);
+		if (isAutomaticTrackingMode(project.trackingMode)) {
+			this.addTrackingPathSetting(section, project, updateProgress);
+		}
 
 		this.addToggleNumberSetting(
 			section,
@@ -216,16 +224,87 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		description: string,
 		value: number,
 		onCommit: (value: number) => Promise<void>,
+		disabled = false,
 	): void {
 		new Setting(containerEl)
 			.setName(name)
 			.setDesc(description)
 			.addText((text) => {
 				configureNumberInput(text, value);
+				text.setDisabled(disabled);
 				text.onChange((changedValue) => {
 					void onCommit(sanitizeNumberInput(changedValue, value));
 				});
 			});
+	}
+
+	private addTrackingModeSetting(containerEl: HTMLElement, project: WritingProject): void {
+		new Setting(containerEl)
+			.setName("Tracking mode")
+			.setDesc("Choose whether word count is entered manually or calculated from notes.")
+			.addDropdown((dropdown) => {
+				dropdown.addOption("manual", "Manual");
+				dropdown.addOption("file", "Single note");
+				dropdown.addOption("folder", "Folder");
+				dropdown.setValue(project.trackingMode);
+				dropdown.onChange(async (value) => {
+					await this.plugin.updateProjectTracking(
+						project.id,
+						value as ProjectTrackingMode,
+						project.trackedPath,
+					);
+					this.display();
+				});
+			});
+	}
+
+	private addTrackingPathSetting(
+		containerEl: HTMLElement,
+		project: WritingProject,
+		updateProgress: () => void,
+	): void {
+		new Setting(containerEl)
+			.setName(project.trackingMode === "file" ? "Tracked note" : "Tracked folder")
+			.setDesc(
+				project.trackingMode === "file"
+					? "Set the note used to calculate this project's current word count."
+					: "Set the folder whose Markdown files should be counted for this project.",
+			)
+			.addText((text) => {
+				text.setPlaceholder(project.trackingMode === "file" ? "Path/to/note.md" : "Path/to/folder");
+				text.setValue(project.trackedPath);
+				text.onChange(async (value) => {
+					project.trackedPath = value.trim();
+					await this.plugin.updateProjectTracking(project.id, project.trackingMode, project.trackedPath);
+					updateProgress();
+				});
+			})
+			.addButton((button) =>
+				button.setButtonText("Use active note").onClick(async () => {
+					const activeFile = this.app.workspace.getActiveFile();
+					if (!activeFile) {
+						new Notice("Open a note first.");
+						return;
+					}
+
+					const nextPath =
+						project.trackingMode === "file" ? activeFile.path : activeFile.parent?.path ?? "";
+					if (!nextPath) {
+						new Notice("Could not determine a folder from the active note.");
+						return;
+					}
+
+					project.trackedPath = nextPath;
+					await this.plugin.updateProjectTracking(project.id, project.trackingMode, nextPath);
+					this.display();
+				}),
+			)
+			.addButton((button) =>
+				button.setButtonText("Recount").onClick(async () => {
+					await this.plugin.updateProjectTracking(project.id, project.trackingMode, project.trackedPath);
+					this.display();
+				}),
+			);
 	}
 
 	private addToggleNumberSetting(
@@ -258,6 +337,14 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 	private getProgressDescription(project: WritingProject): string {
 		const wordsWritten = Math.max(project.currentWordCount - project.startingWordCount, 0);
 		const parts = [`${wordsWritten} words written`];
+
+		if (project.trackingMode === "manual") {
+			parts.push("manual tracking");
+		} else if (project.trackedPath) {
+			parts.push(`${project.trackingMode}: ${project.trackedPath}`);
+		} else {
+			parts.push(`${project.trackingMode}: source not set`);
+		}
 
 		if (project.wordGoal.enabled) {
 			const percent = getPercent(project.currentWordCount, project.wordGoal.target);

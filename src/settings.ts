@@ -1,5 +1,6 @@
 import {
 	ActiveWritingSession,
+	ProjectTrackingMode,
 	WritingProject,
 	WritingSession,
 	WritingTrackerSettings,
@@ -16,6 +17,8 @@ export function createEmptyProject(): WritingProject {
 	return {
 		id: createProjectId(),
 		name: "Untitled project",
+		trackingMode: "manual",
+		trackedPath: "",
 		startingWordCount: 0,
 		currentWordCount: 0,
 		wordGoal: {
@@ -50,6 +53,8 @@ export function normalizeProject(project: Partial<WritingProject> | null | undef
 	return {
 		id: project?.id?.trim() || createProjectId(),
 		name: project?.name?.trim() || baseProject.name,
+		trackingMode: normalizeTrackingMode(project?.trackingMode),
+		trackedPath: typeof project?.trackedPath === "string" ? project.trackedPath.trim() : "",
 		startingWordCount: sanitizeNumber(project?.startingWordCount, 0),
 		currentWordCount: sanitizeNumber(
 			project?.currentWordCount,
@@ -73,6 +78,10 @@ export function sanitizeNumber(value: unknown, fallback: number): number {
 	}
 
 	return fallback;
+}
+
+export function isAutomaticTrackingMode(mode: ProjectTrackingMode): boolean {
+	return mode === "file" || mode === "folder";
 }
 
 export function createSessionId(): string {
@@ -125,6 +134,14 @@ function normalizeTimestamp(value: unknown): string {
 	}
 
 	return new Date().toISOString();
+}
+
+function normalizeTrackingMode(value: unknown): ProjectTrackingMode {
+	if (value === "file" || value === "folder") {
+		return value;
+	}
+
+	return "manual";
 }
 
 function createProjectId(): string {

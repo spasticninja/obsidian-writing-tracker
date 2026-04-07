@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { completeSession, createActiveSession } from "../src/session-state";
+import {
+	calculateActiveSessionMetrics,
+	completeSession,
+	createActiveSession,
+	sanitizeProjectWordCount,
+} from "../src/session-state";
 import { createEmptyProject } from "../src/settings";
 
 describe("createActiveSession", () => {
@@ -64,5 +69,39 @@ describe("completeSession", () => {
 
 		expect(completed.endingWordCount).toBe(500);
 		expect(completed.wordsWritten).toBe(0);
+	});
+});
+
+describe("calculateActiveSessionMetrics", () => {
+	it("reports elapsed time and words written for the active session", () => {
+		const project = createEmptyProject();
+		project.id = "project-1";
+		project.startingWordCount = 0;
+		project.currentWordCount = 1850;
+
+		const metrics = calculateActiveSessionMetrics(
+			project,
+			{
+				id: "session-3",
+				projectId: project.id,
+				startedAt: "2026-04-06T10:00:00.000Z",
+				startingWordCount: 1200,
+			},
+			new Date("2026-04-06T10:45:30.000Z"),
+		);
+
+		expect(metrics.elapsedMs).toBe(2730000);
+		expect(metrics.currentWordCount).toBe(1850);
+		expect(metrics.wordsWritten).toBe(650);
+	});
+});
+
+describe("sanitizeProjectWordCount", () => {
+	it("does not allow current word count below the project starting point", () => {
+		const project = createEmptyProject();
+		project.startingWordCount = 800;
+
+		expect(sanitizeProjectWordCount(project, 500)).toBe(800);
+		expect(sanitizeProjectWordCount(project, 1200)).toBe(1200);
 	});
 });
