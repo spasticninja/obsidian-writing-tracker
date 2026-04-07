@@ -1,14 +1,70 @@
 .writing-tracker-project {
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 12px;
-	padding: 1rem;
 	margin-top: 1rem;
 	background-color: var(--background-secondary);
+	overflow: hidden;
 }
 
-.writing-tracker-project h3 {
-	margin-top: 0;
-	margin-bottom: 0.75rem;
+.writing-tracker-project-accordion {
+	display: block;
+}
+
+.writing-tracker-project-accordion summary {
+	list-style: none;
+}
+
+.writing-tracker-project-accordion summary::-webkit-details-marker {
+	display: none;
+}
+
+.writing-tracker-project-summary {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	padding: 1rem;
+	cursor: pointer;
+	position: relative;
+	padding-right: 2.5rem;
+}
+
+.writing-tracker-project-summary-chevron {
+	position: absolute;
+	right: 1rem;
+	top: 1rem;
+	color: var(--text-muted);
+	width: 1.1rem;
+	height: 1.1rem;
+}
+
+.writing-tracker-project-summary-heading {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.writing-tracker-project-summary-title {
+	font-weight: 600;
+}
+
+.writing-tracker-project-summary-badge {
+	font-size: 0.75rem;
+	line-height: 1;
+	padding: 0.2rem 0.45rem;
+	border-radius: 999px;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.writing-tracker-project-summary-meta {
+	color: var(--text-muted);
+	font-size: 0.9rem;
+	word-break: break-word;
+}
+
+.writing-tracker-project-body {
+	padding: 0 1rem 1rem;
+	border-top: 1px solid var(--background-modifier-border);
 }
 
 .writing-tracker-empty-state {

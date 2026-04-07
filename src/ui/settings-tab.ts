@@ -1,10 +1,11 @@
-import { App, Notice, PluginSettingTab, Setting, TextComponent } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, TextComponent, setIcon } from "obsidian";
 import WritingTrackerPlugin from "../main";
 import { isAutomaticTrackingMode, sanitizeNumber } from "../settings";
 import { ProjectTrackingMode, WritingProject } from "../types";
 
 export class WritingTrackerSettingTab extends PluginSettingTab {
 	plugin: WritingTrackerPlugin;
+	private readonly expandedProjectIds = new Set<string>();
 
 	constructor(app: App, plugin: WritingTrackerPlugin) {
 		super(app, plugin);
@@ -66,18 +67,60 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 
 	private renderProject(containerEl: HTMLElement, project: WritingProject, index: number): void {
 		const section = containerEl.createDiv({ cls: "writing-tracker-project" });
-		section.createEl("h3", { text: `Project ${index + 1}` });
-		const progressSetting = new Setting(section)
+		const accordion = section.createEl("details", { cls: "writing-tracker-project-accordion" });
+		if (
+			this.expandedProjectIds.has(project.id) ||
+			this.plugin.settings.activeProjectId === project.id ||
+			(index === 0 && this.expandedProjectIds.size === 0)
+		) {
+			accordion.open = true;
+			this.expandedProjectIds.add(project.id);
+		}
+
+		const summary = accordion.createEl("summary", { cls: "writing-tracker-project-summary" });
+		const chevronEl = summary.createSpan({ cls: "writing-tracker-project-summary-chevron" });
+		const updateChevron = () => {
+			setIcon(chevronEl, accordion.open ? "chevron-down" : "chevron-up");
+		};
+		updateChevron();
+
+		accordion.addEventListener("toggle", () => {
+			if (accordion.open) {
+				this.expandedProjectIds.add(project.id);
+			} else {
+				this.expandedProjectIds.delete(project.id);
+			}
+			updateChevron();
+		});
+		const summaryHeading = summary.createDiv({ cls: "writing-tracker-project-summary-heading" });
+		const titleEl = summaryHeading.createEl("span", {
+			cls: "writing-tracker-project-summary-title",
+			text: project.name || `Project ${index + 1}`,
+		});
+		if (this.plugin.settings.activeProjectId === project.id) {
+			summaryHeading.createEl("span", {
+				cls: "writing-tracker-project-summary-badge",
+				text: "Active",
+			});
+		}
+
+		const summaryMeta = summary.createDiv({ cls: "writing-tracker-project-summary-meta" });
+		summaryMeta.setText(this.getProjectSummary(project));
+
+		const body = accordion.createDiv({ cls: "writing-tracker-project-body" });
+		const progressSetting = new Setting(body)
 			.setName("Progress")
 			.setDesc(this.getProgressDescription(project));
 
 		progressSetting.infoEl.addClass("writing-tracker-progress");
 		const updateProgress = () => {
 			progressSetting.setDesc(this.getProgressDescription(project));
+			summaryMeta.setText(this.getProjectSummary(project));
+			titleEl.setText(project.name || `Project ${index + 1}`);
 		};
 
 		this.addTextSetting(
-			section,
+			body,
 			"Project name",
 			"Name used in the tracker.",
 			project.name,
@@ -88,7 +131,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		);
 
 		this.addNumberSetting(
-			section,
+			body,
 			"Starting word count",
 			"Word count when you began tracking this project.",
 			project.startingWordCount,
@@ -103,7 +146,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		);
 
 		this.addNumberSetting(
-			section,
+			body,
 			"Current word count",
 			project.trackingMode === "manual"
 				? "Update this as your draft grows."
@@ -117,13 +160,13 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 			project.trackingMode !== "manual",
 		);
 
-		this.addTrackingModeSetting(section, project);
+		this.addTrackingModeSetting(body, project);
 		if (isAutomaticTrackingMode(project.trackingMode)) {
-			this.addTrackingPathSetting(section, project, updateProgress);
+			this.addTrackingPathSetting(body, project, updateProgress);
 		}
 
 		this.addToggleNumberSetting(
-			section,
+			body,
 			"Word goal",
 			"Enable a target total word count for this project.",
 			project.wordGoal.enabled,
@@ -141,7 +184,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		);
 
 		this.addToggleNumberSetting(
-			section,
+			body,
 			"Time goal",
 			"Enable a target duration in days for this project.",
 			project.timeGoal.enabled,
@@ -159,7 +202,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		);
 
 		this.addTextSetting(
-			section,
+			body,
 			"Notes",
 			"Optional project details.",
 			project.notes,
@@ -169,11 +212,11 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 			},
 		);
 
-		new Setting(section)
+		new Setting(body)
 			.setName("Session history")
 			.setDesc(this.getSessionHistoryDescription(project.id));
 
-		new Setting(section)
+		new Setting(body)
 			.setName("Delete project")
 			.setDesc("Remove this project from the tracker.")
 			.addButton((button) =>
@@ -187,6 +230,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 						this.plugin.settings.sessions = this.plugin.settings.sessions.filter(
 							(session) => session.projectId !== project.id,
 						);
+						this.expandedProjectIds.delete(project.id);
 						if (this.plugin.settings.activeSession?.projectId === project.id) {
 							this.plugin.settings.activeSession = null;
 						}
@@ -353,6 +397,24 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 
 		if (project.timeGoal.enabled) {
 			parts.push(`${project.timeGoal.target} day goal`);
+		}
+
+		return parts.join(" • ");
+	}
+
+	private getProjectSummary(project: WritingProject): string {
+		const parts = [`${project.currentWordCount} words`];
+
+		if (project.trackingMode === "manual") {
+			parts.push("manual");
+		} else if (project.trackedPath) {
+			parts.push(`${project.trackingMode}: ${project.trackedPath}`);
+		} else {
+			parts.push(`${project.trackingMode}: source not set`);
+		}
+
+		if (project.wordGoal.enabled) {
+			parts.push(`${getPercent(project.currentWordCount, project.wordGoal.target)}% of goal`);
 		}
 
 		return parts.join(" • ");
