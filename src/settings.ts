@@ -1,7 +1,15 @@
-import { WritingProject, WritingTrackerSettings } from "./types";
+import {
+	ActiveWritingSession,
+	WritingProject,
+	WritingSession,
+	WritingTrackerSettings,
+} from "./types";
 
 export const DEFAULT_SETTINGS: WritingTrackerSettings = {
 	projects: [],
+	activeProjectId: null,
+	activeSession: null,
+	sessions: [],
 };
 
 export function createEmptyProject(): WritingProject {
@@ -24,9 +32,15 @@ export function createEmptyProject(): WritingProject {
 
 export function normalizeSettings(data: Partial<WritingTrackerSettings> | null | undefined): WritingTrackerSettings {
 	const projects = (data?.projects ?? []).map(normalizeProject);
+	const activeProjectId = normalizeActiveProjectId(data?.activeProjectId, projects);
 
 	return {
 		projects,
+		activeProjectId,
+		activeSession: normalizeActiveSession(data?.activeSession, projects),
+		sessions: (data?.sessions ?? []).map(normalizeSession).filter((session) =>
+			projects.some((project) => project.id === session.projectId),
+		),
 	};
 }
 
@@ -59,6 +73,58 @@ export function sanitizeNumber(value: unknown, fallback: number): number {
 	}
 
 	return fallback;
+}
+
+export function createSessionId(): string {
+	return createProjectId();
+}
+
+function normalizeSession(session: Partial<WritingSession> | null | undefined): WritingSession {
+	return {
+		id: session?.id?.trim() || createSessionId(),
+		projectId: session?.projectId?.trim() || "",
+		startedAt: normalizeTimestamp(session?.startedAt),
+		endedAt: normalizeTimestamp(session?.endedAt),
+		durationMs: sanitizeNumber(session?.durationMs, 0),
+		startingWordCount: sanitizeNumber(session?.startingWordCount, 0),
+		endingWordCount: sanitizeNumber(session?.endingWordCount, 0),
+		wordsWritten: sanitizeNumber(session?.wordsWritten, 0),
+	};
+}
+
+function normalizeActiveSession(
+	session: Partial<ActiveWritingSession> | null | undefined,
+	projects: WritingProject[],
+): ActiveWritingSession | null {
+	if (!session?.projectId || !projects.some((project) => project.id === session.projectId)) {
+		return null;
+	}
+
+	return {
+		id: session?.id?.trim() || createSessionId(),
+		projectId: session.projectId,
+		startedAt: normalizeTimestamp(session?.startedAt),
+		startingWordCount: sanitizeNumber(session?.startingWordCount, 0),
+	};
+}
+
+function normalizeActiveProjectId(
+	activeProjectId: string | null | undefined,
+	projects: WritingProject[],
+): string | null {
+	if (activeProjectId && projects.some((project) => project.id === activeProjectId)) {
+		return activeProjectId;
+	}
+
+	return projects[0]?.id ?? null;
+}
+
+function normalizeTimestamp(value: unknown): string {
+	if (typeof value === "string" && value.trim().length > 0) {
+		return value;
+	}
+
+	return new Date().toISOString();
 }
 
 function createProjectId(): string {

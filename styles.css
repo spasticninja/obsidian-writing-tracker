@@ -18,3 +18,18 @@
 .writing-tracker-progress {
 	color: var(--text-muted);
 }
+
+.writing-tracker-view {
+	padding: 0.75rem;
+}
+
+.writing-tracker-view h2,
+.writing-tracker-view h3 {
+	margin-top: 0;
+}
+
+.writing-tracker-session-list {
+	margin: 0;
+	padding-left: 1.25rem;
+	color: var(--text-muted);
+}

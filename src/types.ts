@@ -3,6 +3,24 @@ export interface WritingGoal {
 	target: number;
 }
 
+export interface WritingSession {
+	id: string;
+	projectId: string;
+	startedAt: string;
+	endedAt: string;
+	durationMs: number;
+	startingWordCount: number;
+	endingWordCount: number;
+	wordsWritten: number;
+}
+
+export interface ActiveWritingSession {
+	id: string;
+	projectId: string;
+	startedAt: string;
+	startingWordCount: number;
+}
+
 export interface WritingProject {
 	id: string;
 	name: string;
@@ -15,4 +33,7 @@ export interface WritingProject {
 
 export interface WritingTrackerSettings {
 	projects: WritingProject[];
+	activeProjectId: string | null;
+	activeSession: ActiveWritingSession | null;
+	sessions: WritingSession[];
 }
