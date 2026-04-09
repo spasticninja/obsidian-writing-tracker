@@ -39,8 +39,21 @@ describe("getTrackedMarkdownPaths", () => {
 		]);
 	});
 
+	it("handles folder paths that already end with a slash", () => {
+		const paths = ["Novel/ch1.md", "Novel/Scenes/ch2.md", "Notes/idea.md"];
+
+		expect(getTrackedMarkdownPaths("folder", "Novel/", paths)).toEqual([
+			"Novel/ch1.md",
+			"Novel/Scenes/ch2.md",
+		]);
+	});
+
 	it("returns no paths for manual mode", () => {
 		expect(getTrackedMarkdownPaths("manual", "Novel", ["Novel/ch1.md"])).toEqual([]);
+	});
+
+	it("returns no paths when a tracked file is missing", () => {
+		expect(getTrackedMarkdownPaths("file", "Drafts/missing.md", ["Drafts/one.md"])).toEqual([]);
 	});
 });
 

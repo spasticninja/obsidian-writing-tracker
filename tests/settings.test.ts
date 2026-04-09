@@ -118,4 +118,34 @@ describe("normalizeSettings", () => {
 		expect(settings.projects[0]?.startingWordCount).toBe(20000);
 		expect(settings.projects[0]?.currentWordCount).toBe(21375);
 	});
+
+	it("defaults invalid tracking data and normalizes imported project values", () => {
+		const settings = normalizeSettings({
+			projects: [
+				{
+					id: "project-2",
+					name: "Imported draft",
+					trackingMode: "weird-mode" as never,
+					trackedPath: " Drafts/imported.md ",
+					manualWordCountAdjustment: 10.9,
+					startingWordCount: 1200,
+					currentWordCount: 200,
+					wordGoal: {
+						enabled: true,
+						target: 50000,
+					},
+					timeGoal: {
+						enabled: false,
+						target: 30,
+					},
+					notes: "",
+				},
+			],
+		});
+
+		expect(settings.projects[0]?.trackingMode).toBe("manual");
+		expect(settings.projects[0]?.trackedPath).toBe("Drafts/imported.md");
+		expect(settings.projects[0]?.manualWordCountAdjustment).toBe(10);
+		expect(settings.projects[0]?.currentWordCount).toBe(200);
+	});
 });
