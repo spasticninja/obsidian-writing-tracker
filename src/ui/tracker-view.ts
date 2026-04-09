@@ -20,7 +20,7 @@ export class WritingTrackerView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "Writing Tracker";
+		return "Writing tracker";
 	}
 
 	getIcon(): string {
@@ -43,7 +43,7 @@ export class WritingTrackerView extends ItemView {
 		contentEl.empty();
 		contentEl.addClass("writing-tracker-view");
 
-		contentEl.createEl("h2", { text: "Writing Tracker" });
+		contentEl.createEl("h2", { text: "Writing tracker" });
 		contentEl.createEl("p", {
 			text: "Choose a project, then start or stop writing sessions from this panel.",
 		});
@@ -57,13 +57,13 @@ export class WritingTrackerView extends ItemView {
 		}
 
 		const activeProject = this.plugin.getActiveProject();
-		if (!activeProject) {
-			contentEl.createEl("p", {
-				cls: "writing-tracker-empty-state",
-				text: "Select an active project in the Writing Tracker settings.",
-			});
-			return;
-		}
+			if (!activeProject) {
+				contentEl.createEl("p", {
+					cls: "writing-tracker-empty-state",
+					text: "Select an active project in the writing tracker settings.",
+				});
+				return;
+			}
 
 		this.renderSidebarCard(
 			contentEl,

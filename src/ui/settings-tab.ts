@@ -16,7 +16,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Writing projects" });
+		new Setting(containerEl).setName("Writing projects").setHeading();
 		containerEl.createEl("p", {
 			text: "Track starting words, current words, and optional word or day goals for each project.",
 		});

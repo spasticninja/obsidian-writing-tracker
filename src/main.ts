@@ -41,9 +41,7 @@ export default class WritingTrackerPlugin extends Plugin {
 		});
 	}
 
-	async onunload(): Promise<void> {
-		await this.app.workspace.detachLeavesOfType(WRITING_TRACKER_VIEW_TYPE);
-	}
+	onunload(): void {}
 
 	getProjectById(projectId: string): WritingProject | undefined {
 		return this.settings.projects.find((project) => project.id === projectId);
@@ -194,7 +192,7 @@ export default class WritingTrackerPlugin extends Plugin {
 		this.settings.projects.push(project);
 		this.settings.activeProjectId ??= project.id;
 		await this.saveSettings();
-		new Notice("Added a new writing project. Edit it in Writing Tracker settings.");
+		new Notice("Added a new writing project. Edit it in the writing tracker settings.");
 	}
 
 	async saveSettings(refreshViews = true): Promise<void> {
@@ -224,8 +222,8 @@ export default class WritingTrackerPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		const loadedData = await this.loadData();
-		this.settings = normalizeSettings(loadedData);
+		const loadedData: unknown = await this.loadData();
+		this.settings = normalizeSettings(loadedData as Partial<WritingTrackerSettings> | null | undefined);
 	}
 
 	async recalculateAutomaticProjects(refreshViews = true): Promise<void> {
@@ -275,13 +273,13 @@ export default class WritingTrackerPlugin extends Plugin {
 
 	private registerCommands(): void {
 		this.addCommand({
-			id: "open-writing-tracker-sidebar",
-			name: "Open writing tracker sidebar",
+			id: "open-sidebar",
+			name: "Open sidebar",
 			callback: async () => {
 				await this.ensureTrackerView();
 				const leaf = this.getTrackerLeaf();
 				if (leaf) {
-					this.app.workspace.revealLeaf(leaf);
+					await this.app.workspace.revealLeaf(leaf);
 				}
 			},
 		});
