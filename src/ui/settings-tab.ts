@@ -68,11 +68,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 	private renderProject(containerEl: HTMLElement, project: WritingProject, index: number): void {
 		const section = containerEl.createDiv({ cls: "writing-tracker-project" });
 		const accordion = section.createEl("details", { cls: "writing-tracker-project-accordion" });
-		if (
-			this.expandedProjectIds.has(project.id) ||
-			this.plugin.settings.activeProjectId === project.id ||
-			(index === 0 && this.expandedProjectIds.size === 0)
-		) {
+		if (this.expandedProjectIds.has(project.id)) {
 			accordion.open = true;
 			this.expandedProjectIds.add(project.id);
 		}
@@ -80,7 +76,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		const summary = accordion.createEl("summary", { cls: "writing-tracker-project-summary" });
 		const chevronEl = summary.createSpan({ cls: "writing-tracker-project-summary-chevron" });
 		const updateChevron = () => {
-			setIcon(chevronEl, accordion.open ? "chevron-down" : "chevron-up");
+			setIcon(chevronEl, accordion.open ? "chevron-up" : "chevron-down");
 		};
 		updateChevron();
 
@@ -318,7 +314,8 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 		project: WritingProject,
 		updateProgress: () => void,
 	): void {
-		new Setting(containerEl)
+		const setting = new Setting(containerEl)
+			.setClass("writing-tracker-tracking-path-setting")
 			.setName(project.trackingMode === "file" ? "Tracked note" : "Tracked folder")
 			.setDesc(
 				project.trackingMode === "file"
@@ -326,6 +323,7 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 					: "Set the folder whose Markdown words should be added on top of the starting word count.",
 			)
 			.addText((text) => {
+				text.inputEl.addClass("writing-tracker-tracking-path-input");
 				text.setPlaceholder(project.trackingMode === "file" ? "Path/to/note.md" : "Path/to/folder");
 				text.setValue(project.trackedPath);
 				text.onChange(async (value) => {
@@ -360,6 +358,11 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 					this.display();
 				}),
 			);
+
+		setting.controlEl.addClass("writing-tracker-tracking-path-controls");
+		Array.from(setting.controlEl.querySelectorAll("button")).forEach((button) => {
+			button.addClass("writing-tracker-tracking-path-button");
+		});
 	}
 
 	private addSignedNumberSetting(
@@ -437,17 +440,6 @@ export class WritingTrackerSettingTab extends PluginSettingTab {
 
 	private getProjectSummary(project: WritingProject): string {
 		const parts = [`${project.currentWordCount} words`];
-
-		if (project.trackingMode === "manual") {
-			parts.push("manual");
-		} else if (project.trackedPath) {
-			parts.push(`${project.trackingMode}: + tracked words from ${project.trackedPath}`);
-			if (project.manualWordCountAdjustment !== 0) {
-				parts.push(`${project.manualWordCountAdjustment} adjustment`);
-			}
-		} else {
-			parts.push(`${project.trackingMode}: source not set`);
-		}
 
 		if (project.wordGoal.enabled) {
 			parts.push(`${getPercent(project.currentWordCount, project.wordGoal.target)}% of goal`);

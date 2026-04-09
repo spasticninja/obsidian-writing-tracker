@@ -19,3 +19,9 @@ A rough plan for implementing this plugin.
 - Can we keep track of word count across all notes? Or do we need to have users define which files to watch?
 - What framework should I use to write tests? vitest?
 
+## TODO:
+- Adding File or group of files shouldn't overwrite total word count necessarily. We should allow user to set the current starting word count and then subsequent sessions add to the word count goal
+- Fix some styling for the dropdown in the sidebar, the active projects section should stack as it looks really squished side by side. Let's do title, helper text, CTA for these cards.
+- Don't know if I like the "Automatic recount" section being there, not unless it resets the session. Hmmm ,no. Let's remove
+- Project progress should also list goal(s). So add time goals if provided
+
