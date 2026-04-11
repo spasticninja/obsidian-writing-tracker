@@ -205,6 +205,7 @@ export default class WritingTrackerPlugin extends Plugin {
 	async ensureTrackerView(): Promise<void> {
 		const leaves = this.app.workspace.getLeavesOfType(WRITING_TRACKER_VIEW_TYPE);
 		if (leaves.length > 0) {
+			this.closeDuplicateTrackerLeaves(leaves);
 			this.refreshViews();
 			return;
 		}
@@ -268,6 +269,16 @@ export default class WritingTrackerPlugin extends Plugin {
 			if (view instanceof WritingTrackerView) {
 				view.render();
 			}
+		});
+	}
+
+	private closeDuplicateTrackerLeaves(leaves: WorkspaceLeaf[]): void {
+		if (leaves.length <= 1) {
+			return;
+		}
+
+		leaves.slice(1).forEach((leaf) => {
+			leaf.detach();
 		});
 	}
 
@@ -354,6 +365,8 @@ export default class WritingTrackerPlugin extends Plugin {
 	}
 
 	private getTrackerLeaf(): WorkspaceLeaf | null {
+		const leaves = this.app.workspace.getLeavesOfType(WRITING_TRACKER_VIEW_TYPE);
+		this.closeDuplicateTrackerLeaves(leaves);
 		return this.app.workspace.getLeavesOfType(WRITING_TRACKER_VIEW_TYPE)[0] ?? null;
 	}
 }
