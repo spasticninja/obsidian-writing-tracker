@@ -6,5 +6,6 @@
 	"description": "A simple project and session tracker for Obsidian.",
 	"author": "Allison Betancourt",
 	"authorUrl": "https://allisonbetancourt.com",
-	"isDesktopOnly": false
+	"isDesktopOnly": false,
+	"fundingUrl": "https://buymeacoffee.com/abbetancourt"
 }
